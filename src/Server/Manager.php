@@ -106,7 +106,7 @@ class Manager
                 $this->container['swoole.server']->on($event, function () use ($event) {
                     $event = sprintf('swoole.%s', $event);
 
-                    $this->container['events']->fire($event, func_get_args());
+                    $this->container['events']->dispatch($event, func_get_args());
                 });
             }
         }
@@ -120,7 +120,7 @@ class Manager
         $this->setProcessName('master process');
         $this->createPidFile();
 
-        $this->container['events']->fire('swoole.start', func_get_args());
+        $this->container['events']->dispatch('swoole.start', func_get_args());
     }
 
     /**
@@ -131,7 +131,7 @@ class Manager
     public function onManagerStart()
     {
         $this->setProcessName('manager process');
-        $this->container['events']->fire('swoole.managerStart', func_get_args());
+        $this->container['events']->dispatch('swoole.managerStart', func_get_args());
     }
 
     /**
@@ -142,7 +142,7 @@ class Manager
         $this->clearCache();
         $this->setProcessName('worker process');
 
-        $this->container['events']->fire('swoole.workerStart', func_get_args());
+        $this->container['events']->dispatch('swoole.workerStart', func_get_args());
 
         // don't init laravel app in task workers
         if ($server->taskworker) {
@@ -173,7 +173,7 @@ class Manager
      */
     public function onRequest($swooleRequest, $swooleResponse)
     {
-        $this->app['events']->fire('swoole.request');
+        $this->app['events']->dispatch('swoole.request');
 
         $this->resetOnRequest();
         $handleStatic = $this->container['config']->get('swoole_http.handle_static_files', true);
@@ -226,7 +226,7 @@ class Manager
      */
     public function onTask($server, $taskId, $srcWorkerId, $data)
     {
-        $this->container['events']->fire('swoole.task', func_get_args());
+        $this->container['events']->dispatch('swoole.task', func_get_args());
 
         try {
             // push websocket message
@@ -241,7 +241,7 @@ class Manager
                 $decoded = json_decode($data, true);
 
                 if (JSON_ERROR_NONE === json_last_error() && isset($decoded['job'])) {
-                    (new SwooleTaskJob($this->container, $server, $data, $taskId, $srcWorkerId))->fire();
+                    (new SwooleTaskJob($this->container, $server, $data, $taskId, $srcWorkerId))->dispatch();
                 }
             }
         } catch (Throwable $e) {
